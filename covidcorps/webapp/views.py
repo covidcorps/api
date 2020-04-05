@@ -14,11 +14,10 @@ from rest_framework.response import Response
 from rest_framework.status import (HTTP_200_OK, HTTP_201_CREATED,
                                    HTTP_202_ACCEPTED, HTTP_400_BAD_REQUEST,
                                    HTTP_404_NOT_FOUND)
-from rest_framework.views import APIView
+from rest_framework.views import APIView, get_view_name
+from rest_framework.serializers import Serializer
 
-from . import handlers
-from .models import Account
-from .serializers import AccountSerializer
+from . import handlers, models, serializers
 
 
 def index(request):
@@ -78,23 +77,28 @@ def index(request):
 #     """
 #     model = Account
 #     context_object_name = 'accounts'
-#     serializer = AccountSerializer
+#     serializer = serializers.AccountSerializer
 
 
+
+class ListResourceMixin:
+    def _parse_and_deserialize(self, request: HttpRequest, **kwargs) -> Serializer:
+        data = JSONParser().parse(request)
+        return self.serializer(data=data)
 
 
 class ListAccounts(APIView):
     """
     List all accounts in the system
     """
-    def get(self, request, format=None):
-        accounts = Account.objects.all()
-        s = AccountSerializer(accounts, many=True)
+    def get(self, request: HttpRequest, format=None):
+        accounts = models.Account.objects.all()
+        s = serializers.AccountSerializer(accounts, many=True)
         return Response(s.data)
 
-    def post(self, request, format=None):
+    def post(self, request: HttpRequest, format=None):
         data = JSONParser().parse(request)
-        s = AccountSerializer(data=data)
+        s = serializers.AccountSerializer(data=data)
         if s.is_valid():
             s.save()
             return Response(s.data, status=HTTP_201_CREATED)
@@ -105,7 +109,75 @@ class DetailAccounts(APIView):
     """
     Show detail relating to a specific account
     """
-    def get(self, request, pk, format=None):
-        account = Account.objects.get(pk=pk)
-        s = AccountSerializer(account)
+    def get(self, request: HttpRequest, pk: int, format=None):
+        account = models.Account.objects.get(pk=pk)
+        s = serializers.AccountSerializer(account)
         return Response(s.data)
+
+    def delete(self, request: HttpRequest, pk: int, format=None):
+        account = models.Account.objects.get(pk=pk)
+        account.active = False
+        account.save()
+        return Response(serializers.AccountSerializer(account).data)
+
+class DetailAccountUpdate(APIView):
+    """
+    Activate/Deactivate a specific account
+    """
+    def get(self, request: HttpRequest, pk: int, action: str = 'activate', format=None):
+        if action not in ('activate', 'deactivate'):
+            return Response(status=HTTP_400_BAD_REQUEST)
+
+        account = models.Account.objects.get(pk=pk)
+        account.active = action == 'activate'
+        account.save()
+        return Response(serializers.AccountSerializer(account).data, status=HTTP_202_ACCEPTED)
+
+class ListResource(ListResourceMixin, APIView):
+    """
+    Lists objects of a particular resource type
+    """
+    resource = None # URL router should specify the model to use
+    parent = None # For resources that only exist as a child of another
+    serializer = None # Serializer must be specified
+    def get(self, request: HttpRequest, format=None, **kwargs) -> HttpResponse:
+        if self.parent is not None:
+            # A child resource is being requested
+            child = getattr(self.parent.objects.get(pk=kwargs['pk']), f'{self.resource.__name__.lower()}_set')
+            r = child.all()
+        else:
+            r = self.resource.objects.all()
+
+        s = self.serializer(r, many=True)
+        return Response(s.data)
+
+    def post(self, request: HttpRequest, format=None, **kwargs) -> HttpResponse:
+        s = self._parse_and_deserialize(request)
+        if s.is_valid():
+            s.save()
+            return Response(s.data, status=HTTP_201_CREATED)
+        return Response(s.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class ListCorpsMembers(ListResource):
+    """
+    List all corps members
+    """
+    resource = models.CorpsMember
+    serializer = serializers.CorpsMemberSerializer
+
+class ListCorpsMemberPhones(ListResource):
+    """
+    List phone numbers of corps members
+    """
+    resource = models.CorpsMemberPhoneNumber
+    parent = models.CorpsMember
+    serializer = serializers.CorpsMemberPhoneSerializer
+
+class ListCorpsMemberEmails(ListResource):
+    """
+    List phone numbers of corps members
+    """
+    resource = models.CorpsMemberEmail
+    parent = models.CorpsMember
+    serializer = serializers.CorpsMemberEmailSerializer

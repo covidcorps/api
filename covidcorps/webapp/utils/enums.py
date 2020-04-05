@@ -4,7 +4,7 @@ from typing import List
 class ChoicesEnum(Enum):
     @classmethod
     def choices(cls):
-        return [(tag, tag.value) for tag in cls]
+        return [(tag.name, tag.value) for tag in cls]
 
 class USStates(ChoicesEnum):
     AL = "Alabama"
@@ -69,3 +69,13 @@ class AssignmentStatus(ChoicesEnum):
     ENROUTE = "ENROUTE"
     ONSITE = "ONSITE"
     COMPLETE = "COMPLETE"
+
+class CorpsMemberCategories(ChoicesEnum):
+    DOCTOR = "Doctor"
+    NURSE = "Nurse"
+    RESPIRATORY = "Respiratory Specialist"
+    ORDERLY = "Orderly"
+    PA = "Physicians Assistant"
+    NP = "Nurse Practicioner"
+    PSYCHOLOGIST = "Psychologist"
+    PSYCHIATRIST = "Psychiatrist"
