@@ -5,11 +5,16 @@ from .utils.enums import USStates, AssignmentStatus
 
 # Create your models here.
 
-class Account(AbstractUser):
+class Account(models.Model):
+    email = models.EmailField()
+    password = models.CharField(max_length=128)
 
     # Timestamps
     created_ts = models.DateTimeField(auto_now_add=True)
     last_ts = models.DateTimeField(auto_now=True)
+
+    def set_password(self, raw_password):
+        self.password = make_password(raw_password)
 
     @staticmethod
     def init(email, password):
@@ -17,7 +22,9 @@ class Account(AbstractUser):
         Creates a new Account instance, but hashes the password
         on creation
         """
-        return Account(email=email, password=make_password(password))
+        account = Account(email=email)
+        account.set_password(password)
+        return account
 
 class CorpsMember(models.Model):
     account = models.ForeignKey(Account, on_delete=models.CASCADE)

@@ -13,8 +13,9 @@ class AccountSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        return Account.init(**validated_data)
-
+        a = Account.init(**validated_data)
+        a.save()
+        return a
 
     def update(self, instance: Account, validated_data):
         instance.email = validated_data.get('email', instance.email)
