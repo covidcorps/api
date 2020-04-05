@@ -11,6 +11,15 @@ urlpatterns = [
 
     path('corpsmembers/', views.ListCorpsMembers.as_view(), name='corpsmembers-list'),
     path('corpsmembers/<int:pk>/phones', views.ListCorpsMemberPhones.as_view(), name='corpsmembers-phones-list'),
+    path('corpsmembers/<int:pk>/emails', views.ListCorpsMemberEmails.as_view(), name='corpsmembers-emails-list'),
+    path('locations/', views.ListLocations.as_view(), name='locations-list'),
+    # path('locations/<int:pk>')
+    path('locations/<int:pk>/contacts', views.ListLocationContacts.as_view(), name='location-contacts-list'),
+    path('locations/<int:pk>/contacts/<int:contact_pk>/phones', views.ListLocationContactPhones.as_view(), name='location-contact-phones-list'),
+    path('locations/<int:pk>/contacts/<int:contact_pk>/emails', views.ListLocationContactEmails.as_view(), name='location-contact-emails-list'),
+    
+    path('deployments/', views.ListDeployments.as_view(), name='deployments-list'),
+
 
 ]
 

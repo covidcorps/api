@@ -19,6 +19,8 @@ from rest_framework.serializers import Serializer
 
 from . import handlers, models, serializers
 
+import io
+
 
 def index(request):
     return HttpResponse("Hello, world. You're at the webapp index.")
@@ -83,8 +85,8 @@ def index(request):
 
 class ListResourceMixin:
     def _parse_and_deserialize(self, request: HttpRequest, **kwargs) -> Serializer:
-        data = JSONParser().parse(request)
-        return self.serializer(data=data)
+        stream = io.BytesIO(request.body)
+        return self.serializer(data=JSONParser().parse(stream))
 
 
 class ListAccounts(APIView):
@@ -99,10 +101,11 @@ class ListAccounts(APIView):
     def post(self, request: HttpRequest, format=None):
         data = JSONParser().parse(request)
         s = serializers.AccountSerializer(data=data)
-        if s.is_valid():
-            s.save()
-            return Response(s.data, status=HTTP_201_CREATED)
-        return Response(s.errors, status=HTTP_400_BAD_REQUEST)
+        if not s.is_valid():
+            return Response(s.errors, status=HTTP_400_BAD_REQUEST)
+
+        s.save()
+        return Response(s.data, status=HTTP_201_CREATED)
 
 
 class DetailAccounts(APIView):
@@ -153,10 +156,11 @@ class ListResource(ListResourceMixin, APIView):
 
     def post(self, request: HttpRequest, format=None, **kwargs) -> HttpResponse:
         s = self._parse_and_deserialize(request)
-        if s.is_valid():
-            s.save()
-            return Response(s.data, status=HTTP_201_CREATED)
-        return Response(s.errors, status=HTTP_400_BAD_REQUEST)
+        if not s.is_valid():
+            return Response(s.errors, status=HTTP_400_BAD_REQUEST)
+
+        s.save()
+        return Response(s.data, status=HTTP_201_CREATED)
 
 
 class ListCorpsMembers(ListResource):
@@ -176,8 +180,49 @@ class ListCorpsMemberPhones(ListResource):
 
 class ListCorpsMemberEmails(ListResource):
     """
-    List phone numbers of corps members
+    List emails of corps members
     """
     resource = models.CorpsMemberEmail
     parent = models.CorpsMember
     serializer = serializers.CorpsMemberEmailSerializer
+
+
+class ListLocations(ListResource):
+    """
+    Lists locations needing assistance
+    """
+    resource = models.Location
+    serializer = serializers.LocationSerializer
+
+
+class ListLocationContacts(ListResource):
+    """
+    Lists location contacts
+    """
+    resource = models.LocationContact
+    parent = models.Location
+    serializer = serializers.LocationContactsSerializer
+
+
+class ListLocationContactPhones(ListResource):
+    """
+    List phone numbers of location contacts
+    """
+    resource = models.LocationContactPhoneNumber
+    parent = models.LocationContact
+    serializer = serializers.LocationContactPhoneSerializer
+
+class ListLocationContactEmails(ListResource):
+    """
+    List emails of location contacts
+    """
+    resource = models.LocationContactEmail
+    parent = models.LocationContact
+    serializer = serializers.LocationContactEmailSerializer
+
+class ListDeployments(ListResource):
+    """
+    List deployments underway
+    """
+    resource = models.Deployment
+    serializer = serializers.DeploymentSerializer

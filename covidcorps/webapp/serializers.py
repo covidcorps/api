@@ -51,8 +51,36 @@ class CorpsMemberSerializer(serializers.ModelSerializer):
 class CorpsMemberPhoneSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.CorpsMemberPhoneNumber
+        fields = '__all__'
 
 class CorpsMemberEmailSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.CorpsMemberEmail
+        fields = '__all__'
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Location
+        fields = '__all__'
+
+class LocationContactsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.LocationContact
+        fields = '__all__'
+
+
+class LocationContactPhoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.LocationContactPhoneNumber
+        fields = '__all__'
+
+class LocationContactEmailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.LocationContactEmail
+        fields = '__all__'
+
+class DeploymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Deployment
+        fields = '__all__'
 
