@@ -151,6 +151,7 @@ class Assignment(models.Model):
     status = models.CharField(
         max_length=10,
         choices=enums.AssignmentStatus.choices(),
+        default=enums.AssignmentStatus.PENDING.name,
     )
 
     # Timestamps

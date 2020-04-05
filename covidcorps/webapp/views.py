@@ -86,7 +86,10 @@ def index(request):
 class ListResourceMixin:
     def _parse_and_deserialize(self, request: HttpRequest, **kwargs) -> Serializer:
         stream = io.BytesIO(request.body)
-        return self.serializer(data=JSONParser().parse(stream))
+        data = JSONParser().parse(stream)
+        if kwargs:
+            data.update(kwargs)
+        return self.serializer(data=data)
 
 
 class ListAccounts(APIView):
@@ -136,6 +139,19 @@ class DetailAccountUpdate(APIView):
         account.save()
         return Response(serializers.AccountSerializer(account).data, status=HTTP_202_ACCEPTED)
 
+
+def get_pk_value(kwargs, *keys):
+    # print('searching')
+    # print(kwargs)
+    # print('for', keys)
+    for k in keys:
+        if k in kwargs:
+            return kwargs[k]
+        if f'{k}_pk' in kwargs:
+            return kwargs[f'{k}_pk']
+
+    return kwargs.get('pk', None)
+
 class ListResource(ListResourceMixin, APIView):
     """
     Lists objects of a particular resource type
@@ -146,7 +162,7 @@ class ListResource(ListResourceMixin, APIView):
     def get(self, request: HttpRequest, format=None, **kwargs) -> HttpResponse:
         if self.parent is not None:
             # A child resource is being requested
-            child = getattr(self.parent.objects.get(pk=kwargs['pk']), f'{self.resource.__name__.lower()}_set')
+            child = getattr(self.parent.objects.get(pk=get_pk_value(kwargs, self.parent.__name__.lower())), f'{self.resource.__name__.lower()}_set')
             r = child.all()
         else:
             r = self.resource.objects.all()
@@ -155,10 +171,10 @@ class ListResource(ListResourceMixin, APIView):
         return Response(s.data)
 
     def post(self, request: HttpRequest, format=None, **kwargs) -> HttpResponse:
-        s = self._parse_and_deserialize(request)
+        # Check to see if this is supposed to be the creation of a child
+        s = self._parse_and_deserialize(request, **kwargs)
         if not s.is_valid():
             return Response(s.errors, status=HTTP_400_BAD_REQUEST)
-
         s.save()
         return Response(s.data, status=HTTP_201_CREATED)
 
@@ -226,3 +242,34 @@ class ListDeployments(ListResource):
     """
     resource = models.Deployment
     serializer = serializers.DeploymentSerializer
+
+class ListLocationDeployments(ListResource):
+    """
+    List deployments underway
+    """
+    resource = models.Deployment
+    parent = models.Location
+    serializer = serializers.DeploymentSerializer
+
+class ListAssignments(ListResource):
+    """
+    List all assignments, regardless of member or deployment
+    """
+    resource = models.Assignment
+    serializer = serializers.AssignmentSerializer
+
+class ListCorpsMemberAssignments(ListResource):
+    """
+    List assignments for corpmembers
+    """
+    resource = models.Assignment
+    parent = models.CorpsMember
+    serializer = serializers.AssignmentSerializer
+
+class ListDeploymentAssignments(ListResource):
+    """
+    For a given deployment, list corpsmembers assigned
+    """
+    resource = models.Assignment
+    parent = models.Deployment
+    serializer = serializers.AssignmentSerializer

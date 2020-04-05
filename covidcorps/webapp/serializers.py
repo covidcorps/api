@@ -84,3 +84,8 @@ class DeploymentSerializer(serializers.ModelSerializer):
         model = models.Deployment
         fields = '__all__'
 
+class AssignmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Assignment
+        fields = '__all__'
+
