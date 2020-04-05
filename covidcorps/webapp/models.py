@@ -1,15 +1,11 @@
 from django.db import models
 from django.contrib.auth.hashers import check_password, make_password, is_password_usable
+from django.contrib.auth.models import AbstractUser
 from .utils.enums import USStates, AssignmentStatus
 
 # Create your models here.
 
-class Account(models.Model):
-    email = models.EmailField()
-    password = models.CharField(max_length=128)
-
-    def hash_pw(self, value):
-        self.password = make_password(value)
+class Account(AbstractUser):
 
     # Timestamps
     created_ts = models.DateTimeField(auto_now_add=True)
@@ -21,10 +17,7 @@ class Account(models.Model):
         Creates a new Account instance, but hashes the password
         on creation
         """
-        rv = Account(email=email)
-        rv.hash_pw(password)
-
-        return rv
+        return Account(email=email, password=make_password(password))
 
 class CorpsMember(models.Model):
     account = models.ForeignKey(Account, on_delete=models.CASCADE)

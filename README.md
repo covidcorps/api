@@ -7,6 +7,13 @@
 The CovidCorps service provides a ReSTful API
 
 ```
+accounts: User accounts
+GET         /accounts/
+POST        /accounts/
+GET         /accounts/:id
+PUT         /accounts/:id
+DELETE      /accounts/:id
+
 corpsmembers: Doctors, nurses, and other volunteers who have signed up
 GET         /corpsmembers/
 POST        /corpsmembers/
