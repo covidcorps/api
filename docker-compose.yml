@@ -1,0 +1,29 @@
+# Use postgres/example user/password credentials
+version: '3.7'
+
+services:
+  db:
+    image: postgres:12.2
+    restart: always
+    volumes:
+      - "dbdata:/var/lib/postgresql/data"
+    networks:
+      - backend
+    ports:
+      - "5432:5432"
+    env_file:
+      - ./docker.env
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+    networks:
+      - backend
+
+volumes:
+  dbdata:
+
+networks:
+  backend:
