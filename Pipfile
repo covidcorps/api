@@ -4,11 +4,12 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+ipython = "*"
 
 [packages]
 django = "*"
-ipython = "*"
 psycopg2-binary = "*"
+djangorestframework = "*"
 
 [requires]
 python_version = "3.8"
