@@ -85,7 +85,7 @@ def index(request):
 
 class ListResourceMixin:
     def _parse_and_deserialize(self, request: HttpRequest, **kwargs) -> Serializer:
-        stream = io.BytesIO(request.body)
+        stream = io.BytesIO(request.data)
         data = JSONParser().parse(stream)
         if kwargs:
             data.update(kwargs)

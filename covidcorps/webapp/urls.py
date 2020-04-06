@@ -23,9 +23,6 @@ urlpatterns = [
     path('corpsmembers/<int:corpsmember>/assignments', views.ListCorpsMemberAssignments.as_view(), name='corpsmember-assignments-list'),
     path('deployments/<int:deployment>/assignments', views.ListDeploymentAssignments.as_view(), name='deployment-assignments-list'),
     path('assignments/', views.ListAssignments.as_view(), name='assignments-list'),
-
-
-
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
