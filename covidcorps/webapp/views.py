@@ -178,6 +178,21 @@ class ListResource(ListResourceMixin, APIView):
         s.save()
         return Response(s.data, status=HTTP_201_CREATED)
 
+class DetailResource(APIView):
+    resource = None
+    serializer = None
+    def __init__(self, resource=None, serializer=None, **kwargs):
+        super().__init__(**kwargs)
+        self.resource = resource
+        self.serializer = serializer
+        
+
+    def get(self, request: HttpRequest, pk: int, format=None, **kwargs) -> HttpResponse:
+        r = self.resource.objects.get(pk=pk)
+        s = self.serializer(r)
+        return Response(s.data)
+
+
 
 class ListCorpsMembers(ListResource):
     """
