@@ -178,22 +178,6 @@ class ListResource(ListResourceMixin, APIView):
         s.save()
         return Response(s.data, status=HTTP_201_CREATED)
 
-class DetailResource(APIView):
-    resource = None
-    serializer = None
-    def __init__(self, resource=None, serializer=None, **kwargs):
-        super().__init__(**kwargs)
-        self.resource = resource
-        self.serializer = serializer
-        
-
-    def get(self, request: HttpRequest, pk: int, format=None, **kwargs) -> HttpResponse:
-        r = self.resource.objects.get(pk=pk)
-        s = self.serializer(r)
-        return Response(s.data)
-
-
-
 class ListCorpsMembers(ListResource):
     """
     List all corps members
@@ -288,3 +272,32 @@ class ListDeploymentAssignments(ListResource):
     resource = models.Assignment
     parent = models.Deployment
     serializer = serializers.AssignmentSerializer
+
+
+
+class DetailResource(APIView):
+    resource = None
+    serializer = None
+    def __init__(self, resource=None, serializer=None, **kwargs):
+        super().__init__(**kwargs)
+        self.resource = resource
+        self.serializer = serializer
+        
+
+    def get(self, request: HttpRequest, pk: int, format=None, **kwargs) -> HttpResponse:
+        r = self.resource.objects.get(pk=pk)
+        s = self.serializer(r)
+        return Response(s.data)
+
+
+class CorpsMemberDetailHydrated(APIView):
+    def get(self, request: HttpRequest, pk: int, format=None, **kwargs) -> HttpResponse:
+        if request.GET.get('hydrate') is None:
+            r = models.CorpsMember.objects.get(pk=pk)
+            return Response(serializers.CorpsMemberSerializer(r).data)
+
+        q = models.CorpsMember.objects.filter(id=pk).prefetch_related('deployments')
+        r = q[0]
+        r.assignments = r.assignment_set.all()
+        s = serializers.CorpsMemberHydratedSerializer(r)
+        return Response(s.data)

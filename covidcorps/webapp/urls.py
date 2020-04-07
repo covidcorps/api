@@ -10,7 +10,9 @@ urlpatterns = [
     path('accounts/<int:pk>/<str:action>', views.DetailAccountUpdate.as_view(), name='account-detail-update'),
 
     path('corpsmembers/', views.ListCorpsMembers.as_view(), name='corpsmembers-list'),
-    path('corpsmembers/<int:pk>', views.DetailResource.as_view(resource=models.CorpsMember, serializer=serializers.CorpsMemberSerializer), name='corpsmember-detail'),
+    # path('corpsmembers/<int:pk>', views.DetailResource.as_view(resource=models.CorpsMember, serializer=serializers.CorpsMemberSerializer), name='corpsmember-detail'),
+    path('corpsmembers/<int:pk>', views.CorpsMemberDetailHydrated.as_view(), name='corpsmember-detail'),
+    path('corpsmembers/<int:pk>/hydrate', views.CorpsMemberDetailHydrated.as_view(), name='corpsmember-detail-hydrated'),
     path('corpsmembers/<int:pk>/phones', views.ListCorpsMemberPhones.as_view(), name='corpsmembers-phones-list'),
     path('corpsmembers/<int:cm_pk>/phones/<int:pk>', views.DetailResource.as_view(resource=models.CorpsMemberPhoneNumber, serializer=serializers.CorpsMemberPhoneSerializer), name='corpsmembers-phone-detail'),
     path('corpsmembers/<int:pk>/emails', views.ListCorpsMemberEmails.as_view(), name='corpsmembers-emails-list'),

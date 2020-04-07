@@ -58,7 +58,6 @@ class CorpsMember(models.Model):
     created_ts = models.DateTimeField(auto_now_add=True)
     last_ts = models.DateTimeField(auto_now=True)
 
-
 class CorpsMemberPhoneNumber(models.Model):
     corpsmember = models.ForeignKey(CorpsMember, on_delete=models.CASCADE)
     sms_ok = models.BooleanField(default=False)

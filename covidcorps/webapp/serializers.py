@@ -28,25 +28,7 @@ class AccountSerializer(serializers.ModelSerializer):
 class CorpsMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.CorpsMember
-        fields = [
-            'id',
-            'account',
-            'prefix',
-            'first_name',
-            'middle_name',
-            'last_name',
-            'suffix',
-            'address1',
-            'address2',
-            'city',
-            'state',
-            'zipcode',
-            'active',
-            'category',
-            'deployments',
-            'created_ts',
-            'last_ts',
-        ]
+        fields = '__all__'
 
 class CorpsMemberPhoneSerializer(serializers.ModelSerializer):
     class Meta:
@@ -88,4 +70,9 @@ class AssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Assignment
         fields = '__all__'
+
+
+class CorpsMemberHydratedSerializer(CorpsMemberSerializer):
+    assignments = AssignmentSerializer(required=False, many=True)
+    deployments = DeploymentSerializer(required=False, many=True)
 
