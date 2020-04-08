@@ -34,10 +34,10 @@ urlpatterns = [
     # path('corpsmembers/<int:corpsmember>/assignments', views.ListCorpsMemberAssignments.as_view(), name='corpsmember-assignments-list'),
     path('corpsmembers/<int:corpsmember>/assignments', views.ManyResource.as_view(), name='corpsmember-assignments-list'),
     # path('corpsmembers/<int:corpsmember>/deployments', views.ManyResource.as_view(), name='corpsmember-assignments-list'),
-    path('deployments/<int:deployment>/assignments', views.ListDeploymentAssignments.as_view(), name='deployment-assignments-list'),
+    # path('deployments/<int:deployment>/assignments', views.ListDeploymentAssignments.as_view(), name='deployment-assignments-list'),
     path('assignments/', views.ListAssignments.as_view(), name='assignments-list'),
     path('assignments/<int:pk>', views.DetailResource.as_view(resource=models.Assignment, serializer=serializers.AssignmentSerializer), name='assignment-detail'),
-    re_path(r'.+', views.ManyResource.as_view(), name='list-resource')
+    re_path(r'.+', views.view_router, name='list-resource')
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

@@ -21,9 +21,68 @@ from . import handlers, models, serializers
 
 import io
 
+RESOURCE_MODEL_MAP = dict(
+    account=(models.Account, serializers.AccountSerializer),
+    corpsmembers=(models.CorpsMember, serializers.CorpsMemberSerializer),
+    phones=(models.CorpsMemberPhoneNumber, serializers.CorpsMemberPhoneSerializer),
+    emails=(models.CorpsMember, serializers.CorpsMemberEmailSerializer),
+    locations=(models.Location, serializers.LocationSerializer),
+    contacts=(models.LocationContact, serializers.LocationContactsSerializer),
+    deployments=(models.Deployment, serializers.DeploymentSerializer),
+    assignments=(models.Assignment, serializers.AssignmentSerializer),
+)
+
 
 def index(request):
     return HttpResponse("Hello, world. You're at the webapp index.")
+
+@csrf_exempt
+@api_view(['GET', 'POST', 'PUT', 'DELETE'])
+def view_router(request: HttpRequest, **kwargs):
+    path = request.path.lstrip('/webapp/')
+    path_parts = path.split('/')
+    try:
+        # Check the last element of the path. If an int, then this should be routed to the detail handler
+        pk = int(path_parts[-1])
+        resource = path_parts[-2]
+        return detail_handler(request, resource, pk, **kwargs)
+    except ValueError:
+        # Route to the list handler
+        return list_handler(request, path_parts, **kwargs)
+
+def list_handler(request: HttpRequest, path_parts, **kwargs):
+    # Now for each part of the path, we want to find the matching model)
+    base_model, _ = RESOURCE_MODEL_MAP.get(path_parts[0]) # Model associated with base resource in path will be stored here
+    rv = base_model.objects
+    if len(path_parts) > 1:
+        # Being asked for a nested resource
+        for part in path_parts[1:]:
+            try:
+                # If we're able to extract an integer, then we have a PK and need to use .get to retrieve
+                pk = int(part)
+                rv = rv.get(pk=pk)
+            except ValueError:
+                # Not a pk, so we need to find the associated items
+                try:
+                    rv = getattr(rv, part)
+                except AttributeError:
+                    # This happens when the relationship key on the model uses the _set naming convention
+                    rv = getattr(rv, f'{part[:-1]}_set')
+        
+    # Once here, rv should be set to the final resource in the path, so now we just need to
+    # use all() to get all the instances of the resource and return that
+    rv = rv.all()
+    _, serializer = RESOURCE_MODEL_MAP.get(path_parts[-1])
+    s = serializer(rv, many=True)
+    return Response(s.data)
+
+def detail_handler(request: HttpRequest, resource, pk, **kwargs):
+    model, serializer = RESOURCE_MODEL_MAP.get(resource)
+    r = model.objects.get(pk=pk)
+    s = serializer(r)
+    return Response(s.data)
+    
+
 
 # class JSONResponseMixin:
 #     """
@@ -153,16 +212,7 @@ def get_pk_value(kwargs, *keys):
     return kwargs.get('pk', None)
 
 
-RESOURCE_MODEL_MAP = dict(
-    account=(models.Account, serializers.AccountSerializer),
-    corpsmembers=(models.CorpsMember, serializers.CorpsMemberSerializer),
-    phones=(models.CorpsMemberPhoneNumber, serializers.CorpsMemberPhoneSerializer),
-    emails=(models.CorpsMember, serializers.CorpsMemberEmailSerializer),
-    locations=(models.Location, serializers.LocationSerializer),
-    contacts=(models.LocationContact, serializers.LocationContactsSerializer),
-    deployments=(models.Deployment, serializers.DeploymentSerializer),
-    assignments=(models.Assignment, serializers.AssignmentSerializer),
-)
+
 
 
 class ManyResource(APIView):
