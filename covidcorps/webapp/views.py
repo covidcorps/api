@@ -19,17 +19,21 @@ from rest_framework.serializers import Serializer
 
 from . import handlers, models, serializers
 
+from collections import namedtuple
+
 import io
 
+ResourceObject = namedtuple('ResourceObject', ['model', 'serializer'])
+
 RESOURCE_MODEL_MAP = dict(
-    accounts=(models.Account, serializers.AccountSerializer),
-    corpsmembers=(models.CorpsMember, serializers.CorpsMemberSerializer),
-    phones=(models.CorpsMemberPhoneNumber, serializers.CorpsMemberPhoneSerializer),
-    emails=(models.CorpsMember, serializers.CorpsMemberEmailSerializer),
-    locations=(models.Location, serializers.LocationSerializer),
-    contacts=(models.LocationContact, serializers.LocationContactsSerializer),
-    deployments=(models.Deployment, serializers.DeploymentSerializer),
-    assignments=(models.Assignment, serializers.AssignmentSerializer),
+    accounts=ResourceObject(models.Account, serializers.AccountSerializer),
+    corpsmembers=ResourceObject(models.CorpsMember, serializers.CorpsMemberSerializer),
+    phones=ResourceObject(models.CorpsMemberPhoneNumber, serializers.CorpsMemberPhoneSerializer),
+    emails=ResourceObject(models.CorpsMember, serializers.CorpsMemberEmailSerializer),
+    locations=ResourceObject(models.Location, serializers.LocationSerializer),
+    contacts=ResourceObject(models.LocationContact, serializers.LocationContactsSerializer),
+    deployments=ResourceObject(models.Deployment, serializers.DeploymentSerializer),
+    assignments=ResourceObject(models.Assignment, serializers.AssignmentSerializer),
 )
 
 def parse_incoming(request: HttpRequest):
@@ -78,8 +82,8 @@ def api_handler(request: HttpRequest, **kwargs):
 
 def list_handler(request: HttpRequest, path_parts, **kwargs):
     # Now for each part of the path, we want to find the matching model)
-    base_model, _ = RESOURCE_MODEL_MAP.get(path_parts[0]) # Model associated with base resource in path will be stored here
-    rv = base_model.objects
+    klasses = RESOURCE_MODEL_MAP.get(path_parts[0]) # Model associated with base resource in path will be stored here
+    rv = klasses.model.objects
     if len(path_parts) > 1:
         # Being asked for a nested resource
         for part in path_parts[1:]:
@@ -96,28 +100,28 @@ def list_handler(request: HttpRequest, path_parts, **kwargs):
                     rv = getattr(rv, f'{part[:-1]}_set')
         
     # Once here, rv should be set to the final resource in the path
-    _, serializer = RESOURCE_MODEL_MAP.get(path_parts[-1])
+    last_klasses = RESOURCE_MODEL_MAP.get(path_parts[-1])
     if request.method == 'POST':
         # If this is a POST need to create a new resource.
-        return serializer_update(request.method, parse_incoming(request), rv, serializer, **kwargs)
+        return serializer_update(request.method, parse_incoming(request), rv, last_klasses.serializer, **kwargs)
 
     # GET request, so now we just need to use all() to get all the instances of the resource and return that
     rv = rv.all()
-    s = serializer(rv, many=True)
+    s = last_klasses.serializer(rv, many=True)
     return Response(s.data)
 
 def detail_handler(request: HttpRequest, resource, pk, **kwargs):
-    model, serializer = RESOURCE_MODEL_MAP.get(resource)
+    klasses = RESOURCE_MODEL_MAP.get(resource)
 
     # Get the object associated with the primary key and resource name
-    r = model.objects.get(pk=pk)
+    r = klasses.model.objects.get(pk=pk)
 
     # If this is a PUT or PATCH, use the update function to parse the data and update the instance
     if request.method in ('PUT', 'PATCH'):
-        return serializer_update(request.method, parse_incoming(request), r, serializer, **kwargs)
+        return serializer_update(request.method, parse_incoming(request), r, klasses.serializer, **kwargs)
     
     # Otherwise just return the relevant resource
-    s = serializer(r)
+    s = klasses.serializer(r)
     return Response(s.data)
 
 
@@ -203,8 +207,8 @@ class ManyResource(APIView):
         path_parts = path.split('/')
 
         # Now for each part of the path, we want to find the matching model)
-        base_model, _ = RESOURCE_MODEL_MAP.get(path_parts[0]) # Model associated with base resource in path will be stored here
-        rv = base_model.objects
+        resource = RESOURCE_MODEL_MAP.get(path_parts[0]) # Model associated with base resource in path will be stored here
+        rv = resource.model.objects
         if len(path_parts) > 1:
             # Being asked for a nested resource
             for part in path_parts[1:]:
