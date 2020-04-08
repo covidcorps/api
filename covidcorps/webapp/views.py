@@ -12,7 +12,7 @@ from rest_framework.decorators import api_view
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.status import (HTTP_200_OK, HTTP_201_CREATED,
-                                   HTTP_202_ACCEPTED, HTTP_400_BAD_REQUEST,
+                                   HTTP_202_ACCEPTED, HTTP_400_BAD_REQUEST, HTTP_405_METHOD_NOT_ALLOWED,
                                    HTTP_404_NOT_FOUND)
 from rest_framework.views import APIView, get_view_name
 from rest_framework.serializers import Serializer
@@ -22,7 +22,7 @@ from . import handlers, models, serializers
 import io
 
 RESOURCE_MODEL_MAP = dict(
-    account=(models.Account, serializers.AccountSerializer),
+    accounts=(models.Account, serializers.AccountSerializer),
     corpsmembers=(models.CorpsMember, serializers.CorpsMemberSerializer),
     phones=(models.CorpsMemberPhoneNumber, serializers.CorpsMemberPhoneSerializer),
     emails=(models.CorpsMember, serializers.CorpsMemberEmailSerializer),
@@ -45,6 +45,18 @@ def parse_incoming(request: HttpRequest):
     
     return data
 
+def serializer_update(method: str, data, inst, serializer, **kwargs):
+    if method == 'POST':
+        s = serializer(data=data)
+    elif method == 'PUT':
+        s = serializer(inst, data=data)
+    
+    if not s.is_valid():
+        return Response(s.errors, status=HTTP_400_BAD_REQUEST)
+
+    s.save()
+    return Response(s.data, status=HTTP_201_CREATED)
+
 @csrf_exempt
 @api_view(['GET', 'POST', 'PUT', 'DELETE'])
 def api_handler(request: HttpRequest, **kwargs):
@@ -59,6 +71,9 @@ def api_handler(request: HttpRequest, **kwargs):
         return detail_handler(request, resource, pk, **kwargs)
     except ValueError:
         # Route to the list handler
+        if request.method not in ('GET', 'POST'):
+            return Response(status=HTTP_405_METHOD_NOT_ALLOWED)
+
         return list_handler(request, path_parts, **kwargs)
 
 def list_handler(request: HttpRequest, path_parts, **kwargs):
@@ -83,15 +98,13 @@ def list_handler(request: HttpRequest, path_parts, **kwargs):
     # Once here, rv should be set to the final resource in the path
     _, serializer = RESOURCE_MODEL_MAP.get(path_parts[-1])
     if request.method == 'POST':
-        return create_handler(request, rv, serializer, **kwargs)
+        # If this is a POST need to create a new resource.
+        return serializer_update(request.method, parse_incoming(request), rv, serializer, **kwargs)
 
-    if request.method == 'GET':
-        # GET request, so now we just need to use all() to get all the instances of the resource and return that
-        rv = rv.all()
-        s = serializer(rv, many=True)
-        return Response(s.data)
-
-    return Response(status=205)
+    # GET request, so now we just need to use all() to get all the instances of the resource and return that
+    rv = rv.all()
+    s = serializer(rv, many=True)
+    return Response(s.data)
 
 def detail_handler(request: HttpRequest, resource, pk, **kwargs):
     model, serializer = RESOURCE_MODEL_MAP.get(resource)
@@ -106,88 +119,6 @@ def detail_handler(request: HttpRequest, resource, pk, **kwargs):
     # Otherwise just return the relevant resource
     s = serializer(r)
     return Response(s.data)
-
-
-
-
-def serializer_update(method: str, data, inst, serializer, **kwargs):
-    if method == 'POST':
-        s = serializer(data=data)
-    elif method == 'PUT':
-        s = serializer(inst, data=data)
-    
-    if not s.is_valid():
-        return Response(s.errors, status=HTTP_400_BAD_REQUEST)
-
-    s.save()
-    return Response(s.data, status=HTTP_201_CREATED)
-
-def create_handler(request: HttpRequest, model, serializer, **kwargs):
-    data = parse_incoming(request.data)
-    return serializer_update(request.method, data, model, serializer, **kwargs)
-
-    
-    
-
-
-    
-
-
-# class JSONResponseMixin:
-#     """
-#     Renders JSON responses
-#     """
-#     serializer = None # This must be set by the implementing class should be set to a rest_framework.serializer.Serializer class
-
-#     def render_to_json_response(self, context, **response_kwargs):
-#         """
-#         Returns JSON response
-#         """
-#         rv = self.get_data(context)
-#         print('data')
-#         print(rv)
-#         return JsonResponse(
-#             # self.get_data(context),
-#             rv.data,
-#             safe=False,
-#             **response_kwargs
-#         )
-
-#     def get_data(self, context):
-#         # Sanity check that concrete class set the serializer value
-#         print(type(context))
-#         print(context)
-#         assert self.serializer is not None
-
-#         inst = context[self.context_object_name]
-#         if self.request.method == 'GET':
-#             # GET requested, serialize model instance and return
-#             return self.serializer(inst, many=isinstance(inst, list))
-        
-#         # POST requested, get data in context and create an instance from it
-#         return self.serializer(data=inst).data
-
-
-# class HybridListView(JSONResponseMixin, MultipleObjectTemplateResponseMixin, BaseListView):
-#     """
-#     Base class for my list views. Allows both HTML and JSON responses to routes
-#     """
-
-#     def render_to_response(self, context, **response_kwargs):
-#         # We look for the route to be suffixed with '.json'
-#         if self.request.path.endswith('.json'):
-#             # A JSON response has been requested
-#             return self.render_to_json_response(context, **response_kwargs)
-#         return super().render_to_response(context, **response_kwargs)
-
-
-# class AccountList(HybridListView):
-#     """
-#     Views for the list routes for the account resource
-#     """
-#     model = Account
-#     context_object_name = 'accounts'
-#     serializer = serializers.AccountSerializer
 
 
 
@@ -454,3 +385,60 @@ class CorpsMemberDetailHydrated(APIView):
         r.assignments = r.assignment_set.all()
         s = serializers.CorpsMemberHydratedSerializer(r)
         return Response(s.data)
+
+
+# class JSONResponseMixin:
+#     """
+#     Renders JSON responses
+#     """
+#     serializer = None # This must be set by the implementing class should be set to a rest_framework.serializer.Serializer class
+
+#     def render_to_json_response(self, context, **response_kwargs):
+#         """
+#         Returns JSON response
+#         """
+#         rv = self.get_data(context)
+#         print('data')
+#         print(rv)
+#         return JsonResponse(
+#             # self.get_data(context),
+#             rv.data,
+#             safe=False,
+#             **response_kwargs
+#         )
+
+#     def get_data(self, context):
+#         # Sanity check that concrete class set the serializer value
+#         print(type(context))
+#         print(context)
+#         assert self.serializer is not None
+
+#         inst = context[self.context_object_name]
+#         if self.request.method == 'GET':
+#             # GET requested, serialize model instance and return
+#             return self.serializer(inst, many=isinstance(inst, list))
+        
+#         # POST requested, get data in context and create an instance from it
+#         return self.serializer(data=inst).data
+
+
+# class HybridListView(JSONResponseMixin, MultipleObjectTemplateResponseMixin, BaseListView):
+#     """
+#     Base class for my list views. Allows both HTML and JSON responses to routes
+#     """
+
+#     def render_to_response(self, context, **response_kwargs):
+#         # We look for the route to be suffixed with '.json'
+#         if self.request.path.endswith('.json'):
+#             # A JSON response has been requested
+#             return self.render_to_json_response(context, **response_kwargs)
+#         return super().render_to_response(context, **response_kwargs)
+
+
+# class AccountList(HybridListView):
+#     """
+#     Views for the list routes for the account resource
+#     """
+#     model = Account
+#     context_object_name = 'accounts'
+#     serializer = serializers.AccountSerializer
