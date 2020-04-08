@@ -32,14 +32,25 @@ RESOURCE_MODEL_MAP = dict(
     assignments=(models.Assignment, serializers.AssignmentSerializer),
 )
 
-
-def index(request):
-    return HttpResponse("Hello, world. You're at the webapp index.")
+def parse_incoming(request: HttpRequest):
+    """
+    Parses the incoming JSON data stream to a dict that can be read by
+    the serializer
+    """
+    if not isinstance(request.data, dict):
+        stream = io.BytesIO(request.data)
+        data = JSONParser().parse(stream)
+    else:
+        data = request.data
+    
+    return data
 
 @csrf_exempt
 @api_view(['GET', 'POST', 'PUT', 'DELETE'])
-def view_router(request: HttpRequest, **kwargs):
-    path = request.path.lstrip('/webapp/')
+def api_handler(request: HttpRequest, **kwargs):
+    pfx = '/webapp/'
+    path = request.path[len(pfx):] if request.path.startswith(pfx) else request.path # Strip away the app name, if present
+    path = path[:-1] if request.path.endswith('/') else path # Strip away a trailing slash, if present
     path_parts = path.split('/')
     try:
         # Check the last element of the path. If an int, then this should be routed to the detail handler
@@ -69,18 +80,56 @@ def list_handler(request: HttpRequest, path_parts, **kwargs):
                     # This happens when the relationship key on the model uses the _set naming convention
                     rv = getattr(rv, f'{part[:-1]}_set')
         
-    # Once here, rv should be set to the final resource in the path, so now we just need to
-    # use all() to get all the instances of the resource and return that
-    rv = rv.all()
+    # Once here, rv should be set to the final resource in the path
     _, serializer = RESOURCE_MODEL_MAP.get(path_parts[-1])
-    s = serializer(rv, many=True)
-    return Response(s.data)
+    if request.method == 'POST':
+        return create_handler(request, rv, serializer, **kwargs)
+
+    if request.method == 'GET':
+        # GET request, so now we just need to use all() to get all the instances of the resource and return that
+        rv = rv.all()
+        s = serializer(rv, many=True)
+        return Response(s.data)
+
+    return Response(status=205)
 
 def detail_handler(request: HttpRequest, resource, pk, **kwargs):
     model, serializer = RESOURCE_MODEL_MAP.get(resource)
+
+    # Get the object associated with the primary key and resource name
     r = model.objects.get(pk=pk)
+
+    # If this is a PUT or PATCH, use the update function to parse the data and update the instance
+    if request.method in ('PUT', 'PATCH'):
+        return serializer_update(request.method, parse_incoming(request), r, serializer, **kwargs)
+    
+    # Otherwise just return the relevant resource
     s = serializer(r)
     return Response(s.data)
+
+
+
+
+def serializer_update(method: str, data, inst, serializer, **kwargs):
+    if method == 'POST':
+        s = serializer(data=data)
+    elif method == 'PUT':
+        s = serializer(inst, data=data)
+    
+    if not s.is_valid():
+        return Response(s.errors, status=HTTP_400_BAD_REQUEST)
+
+    s.save()
+    return Response(s.data, status=HTTP_201_CREATED)
+
+def create_handler(request: HttpRequest, model, serializer, **kwargs):
+    data = parse_incoming(request.data)
+    return serializer_update(request.method, data, model, serializer, **kwargs)
+
+    
+    
+
+
     
 
 

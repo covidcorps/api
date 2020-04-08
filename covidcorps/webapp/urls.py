@@ -4,7 +4,6 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from . import views, models, serializers
 
 urlpatterns = [
-    path('', views.index, name='index'),
     path('accounts/', views.ListAccounts.as_view(), name='account-list'),
     path('accounts/<int:pk>', views.DetailAccounts.as_view(), name='account-detail'),
     path('accounts/<int:pk>/<str:action>', views.DetailAccountUpdate.as_view(), name='account-detail-update'),
@@ -35,9 +34,9 @@ urlpatterns = [
     path('corpsmembers/<int:corpsmember>/assignments', views.ManyResource.as_view(), name='corpsmember-assignments-list'),
     # path('corpsmembers/<int:corpsmember>/deployments', views.ManyResource.as_view(), name='corpsmember-assignments-list'),
     # path('deployments/<int:deployment>/assignments', views.ListDeploymentAssignments.as_view(), name='deployment-assignments-list'),
-    path('assignments/', views.ListAssignments.as_view(), name='assignments-list'),
-    path('assignments/<int:pk>', views.DetailResource.as_view(resource=models.Assignment, serializer=serializers.AssignmentSerializer), name='assignment-detail'),
-    re_path(r'.+', views.view_router, name='list-resource')
+    # path('assignments/', views.ListAssignments.as_view(), name='assignments-list'),
+    # path('assignments/<int:pk>', views.DetailResource.as_view(resource=models.Assignment, serializer=serializers.AssignmentSerializer), name='assignment-detail'),
+    re_path(r'.+', views.api_handler, name='list-resource')
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
