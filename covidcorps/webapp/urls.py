@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, re_path
 from rest_framework.urlpatterns import format_suffix_patterns
 
 from . import views, models, serializers
@@ -19,7 +19,8 @@ urlpatterns = [
     path('corpsmembers/<int:cm_pk>/emails/<int:pk>', views.DetailResource.as_view(resource=models.CorpsMemberEmail, serializer=serializers.CorpsMemberEmailSerializer), name='corpsmembers-email-detail'),
     path('locations/', views.ListLocations.as_view(), name='locations-list'),
     path('locations/<int:pk>', views.DetailResource.as_view(resource=models.Location, serializer=serializers.LocationSerializer), name='location-detail'),
-    path('locations/<int:pk>/contacts', views.ListLocationContacts.as_view(), name='location-contacts-list'),
+    # path('locations/<int:pk>/contacts', views.ListLocationContacts.as_view(), name='location-contacts-list'),
+    path('locations/<int:pk>/contacts', views.ManyResource.as_view(), name='location-contacts-list'),
     path('locations/<int:loc_pk>/contacts/<int:pk>', views.DetailResource.as_view(resource=models.LocationContact, serializer=serializers.LocationContactsSerializer), name='location-contact-detail'),
     path('locations/<int:pk>/contacts/<int:contact_pk>/phones', views.ListLocationContactPhones.as_view(), name='location-contact-phones-list'),
     path('locations/<int:loc_pk>/contacts/<int:contact_pk>/phones/<int:pk>', views.DetailResource.as_view(resource=models.LocationContactPhoneNumber, serializer=serializers.LocationContactPhoneSerializer), name='location-contact-phone-detail'),
@@ -30,10 +31,13 @@ urlpatterns = [
     path('deployments/<int:pk>', views.DetailResource.as_view(resource=models.Deployment, serializer=serializers.DeploymentSerializer), name='deployment-detail'),
     path('locations/<int:location>/deployments', views.ListLocationDeployments.as_view(), name='location-deployments-list'),
     path('locations/<int:location_pk>/deployments/<int:pk>', views.DetailResource.as_view(resource=models.Deployment, serializer=serializers.DeploymentSerializer), name='locations-deployment-detail'),
-    path('corpsmembers/<int:corpsmember>/assignments', views.ListCorpsMemberAssignments.as_view(), name='corpsmember-assignments-list'),
+    # path('corpsmembers/<int:corpsmember>/assignments', views.ListCorpsMemberAssignments.as_view(), name='corpsmember-assignments-list'),
+    path('corpsmembers/<int:corpsmember>/assignments', views.ManyResource.as_view(), name='corpsmember-assignments-list'),
+    # path('corpsmembers/<int:corpsmember>/deployments', views.ManyResource.as_view(), name='corpsmember-assignments-list'),
     path('deployments/<int:deployment>/assignments', views.ListDeploymentAssignments.as_view(), name='deployment-assignments-list'),
     path('assignments/', views.ListAssignments.as_view(), name='assignments-list'),
     path('assignments/<int:pk>', views.DetailResource.as_view(resource=models.Assignment, serializer=serializers.AssignmentSerializer), name='assignment-detail'),
+    re_path(r'.+', views.ManyResource.as_view(), name='list-resource')
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
